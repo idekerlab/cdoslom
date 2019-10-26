@@ -4,6 +4,8 @@ import os
 import sys
 import argparse
 import subprocess
+import shutil
+import uuid
 
 
 def _parse_arguments(desc, args):
@@ -29,23 +31,24 @@ def _parse_arguments(desc, args):
     parser.add_argument('--p_val', default=0.1, type=float,
                         help='p-value: increase to get more module')
     parser.add_argument('--cp', default=0.5, type=float,
-                        help='coverage parameter:  gigger value leads to bigger clusters')
+                        help='coverage parameter: Bigger value leads to bigger clusters')
+    parser.add_argument('--oslomdirected', default='/oslom/OSLOM2/oslom_dir',
+                        help='Full path to oslom_dir binary')
+    parser.add_argument('--oslomundirected', default='/oslom/OSLOM2/oslom_undir',
+                        help='Full path to oslom_undir binary')
+    parser.add_argument('--tempdir', default='/tmp',
+                        help='Directory needed to hold files temporarily for processing')
+
     return parser.parse_args(args)
 
 
-def run_oslom_cmd(directed, args):
+def run_oslom_cmd(cmd):
     """
     Runs docker
 
     :param cmd_to_run: command to run as list
     :return:
     """
-    if directed == True:
-        cmd = ['OSLOM2/oslom_dir']
-    else:
-        cmd = ['OSLOM2/oslom_undir']
-    cmd.extend(args)
-
     p = subprocess.Popen(cmd,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
@@ -55,7 +58,17 @@ def run_oslom_cmd(directed, args):
     return p.returncode, out, err
 
 
-def run_oslom(graph, directed=False, nosinglet=False, seed=-1, p_val=0.1, cp=0.5):
+def create_tmpdir(theargs):
+    """
+
+    :param theargs:
+    :return:
+    """
+    tmpdir = os.path.join(theargs.tempdir, 'cdoslom_' + str(uuid.uuid4()))
+    os.makedirs(tmpdir, mode=0o755)
+    return tmpdir
+
+def run_oslom(graph, theargs):
     """
     :param outdir: the output directory to comprehend the output link file
     :param graph: input file
@@ -66,73 +79,112 @@ def run_oslom(graph, directed=False, nosinglet=False, seed=-1, p_val=0.1, cp=0.5
     :param_cp: greater for larger communities
     :return
     """
-    cmdargs = ['-f', graph]
-    weight = ''
-    with open(graph, 'r') as file:
-        lines = file.read().splitlines()
-        while lines[0][0] == '#':
-            lines.pop(0)
-        if len(lines[0].split()) >= 3:
-            weight = '-w'
-        else:
-            weight = '-uw'
-        cmdargs.append(weight)
-    if nosinglet == False:
-        cmdargs.append('-singlet')
-    if isinstance(seed, int) and seed>=0:
-        cmdargs.append('-seed')
-        cmdargs.append(str(seed))
-    cmdargs = cmdargs + ['-t', str(p_val), '-cp', str(cp)]
-    cmdecode, cmdout, cmderr = run_oslom_cmd(directed, cmdargs)
-    
-    if cmdecode != 0:
-        sys.stderr.write('Command failed with non-zero exit code: ' +
-                         str(cmdecode) + ' : ' + str(cmderr) + '\n')
-        return 1
-    
-    outfolder = graph + '_oslo_files'
-    clusts_layers = []
-    clusts_layers.append([])
-    with open(os.path.join(outfolder, 'tp'), 'r') as cfile:
-        lines = cfile.read().splitlines()
-        for i in range(len(lines)//2):
-            clusts_layers[0].append([])
-            members = lines[2*i+1].split()
-            for m in members:
-                clusts_layers[0][i].append(m)
-    cfile.close()
-    i = 1
-    while os.path.isfile(os.path.join(outfolder, 'tp'+str(i))):
-        with open(os.path.join(outfolder, 'tp'+str(i)), 'r') as cfile:
-            clusts_layers.append([])
+    nosinglet = theargs.nosinglet
+    seed = theargs.seed
+    p_val = theargs.p_val
+    cp = theargs.cp
+
+    if theargs.directed is True:
+        cmdargs = [theargs.oslomdirected]
+    else:
+        cmdargs = [theargs.oslomundirected]
+
+    if graph is None or not os.path.isfile(graph):
+        sys.stderr.write(str(graph) + ' is not a file')
+        return 3
+
+    if os.path.getsize(graph) == 0:
+        sys.stderr.write(str(graph) + ' is an empty file')
+        return 4
+
+    olddir = os.getcwd()
+    tmpdir = create_tmpdir(theargs)
+    oldgraph = graph
+    graph = os.path.join(tmpdir, os.path.basename(oldgraph))
+    shutil.copyfile(oldgraph, graph)
+    os.chdir(tmpdir)
+    cmdargs.extend(['-f', graph, '-fast'])
+
+    try:
+        with open(graph, 'r') as file:
+            lines = file.read().splitlines()
+            while lines[0][0] == '#':
+                lines.pop(0)
+            if len(lines[0].split()) >= 3:
+                weight = '-w'
+            else:
+                weight = '-uw'
+            cmdargs.append(weight)
+        if nosinglet == False:
+            cmdargs.append('-singlet')
+        if isinstance(seed, int) and seed>=0:
+            cmdargs.append('-seed')
+            cmdargs.append(str(seed))
+        cmdargs.extend(['-t', str(p_val), '-cp', str(cp)])
+        sys.stderr.write('Running ' + str(cmdargs) + '\n')
+        sys.stderr.flush()
+        cmdecode, cmdout, cmderr = run_oslom_cmd(cmdargs)
+
+        if cmdecode != 0:
+            sys.stderr.write('Command failed with non-zero exit code: ' +
+                             str(cmdecode) + ' : ' + str(cmderr) + '\n')
+            return 1
+
+        if len(cmdout) > 0:
+            sys.stderr.write('Output from cmd: ' + str(cmdout) + '\n')
+
+        if len(cmderr) > 0:
+            sys.stderr.write('Error output from cmd: ' + str(cmderr) + '\n')
+
+        outfolder = graph + '_oslo_files'
+        clusts_layers = []
+        clusts_layers.append([])
+        sys.stderr.write('Attempting to open ' + outfolder + '\n')
+        with open(os.path.join(outfolder, 'tp'), 'r') as cfile:
             lines = cfile.read().splitlines()
-            for j in range(len(lines)//2):
-                clusts_layers[i].append([])
+            for i in range(len(lines)//2):
+                clusts_layers[0].append([])
                 members = lines[2*i+1].split()
                 for m in members:
-                    clusts_layers[i][j].append(m)
+                    clusts_layers[0][i].append(m)
         cfile.close()
-        i = i+1
-    
-    maxNode = 0
-    for clust in clusts_layers[0]:
-        maxNode = max(maxNode, max(clust))
-    for i in range(len(clusts_layers[0])):
-        for n in clusts_layers[0][i]:
-            sys.stdout.write(str(maxNode+i+1) + ',' + str(n) + ',' + 'c-m' + ';')
-    maxNode = maxNode + len(clusts_layers[0])
-    for i in range(1, len(clusts_layers)):
-        for j in range(len(clusts_layers[i-1])):
-            for k in range(len(clusts_layers[i])):
-                if all(x in clusts_layers[i][k] for x in clusts_layers[i-1][j]):
-                    sys.stdout.write(str(maxNode+k+1) + ',' + str(maxNode-len(clusts_layers[i-1])+j+1) + ',' + 'c-c' + ';')
-                    break
-        maxNode = maxNode + len(clusts_layers[i])
-    for i in range(len(clusts_layers[-1])):
-        sys.stdout.write(str(maxNode+1) + ',' + str(maxNode-len(clusts_layers[-1])+i+1) + ',' + 'c-c' + ';')
+        i = 1
+        sys.stderr.write('Opening something else\n')
+        sys.stderr.flush()
+        while os.path.isfile(os.path.join(outfolder, 'tp'+str(i))):
+            with open(os.path.join(outfolder, 'tp'+str(i)), 'r') as cfile:
+                clusts_layers.append([])
+                lines = cfile.read().splitlines()
+                for j in range(len(lines)//2):
+                    clusts_layers[i].append([])
+                    members = lines[2*i+1].split()
+                    for m in members:
+                        clusts_layers[i][j].append(m)
+            cfile.close()
+            i = i+1
 
-    sys.stdout.flush()
-    return 0
+        maxNode = 0
+        for clust in clusts_layers[0]:
+            maxNode = max(maxNode, max(list(map(int, clust))))
+        for i in range(len(clusts_layers[0])):
+            for n in clusts_layers[0][i]:
+                sys.stdout.write(str(maxNode+i+1) + ',' + str(n) + ',' + 'c-m' + ';')
+        maxNode = maxNode + len(clusts_layers[0])
+        for i in range(1, len(clusts_layers)):
+            for j in range(len(clusts_layers[i-1])):
+                for k in range(len(clusts_layers[i])):
+                    if all(x in clusts_layers[i][k] for x in clusts_layers[i-1][j]):
+                        sys.stdout.write(str(maxNode+k+1) + ',' + str(maxNode-len(clusts_layers[i-1])+j+1) + ',' + 'c-c' + ';')
+                        break
+            maxNode = maxNode + len(clusts_layers[i])
+        for i in range(len(clusts_layers[-1])):
+            sys.stdout.write(str(maxNode+1) + ',' + str(maxNode-len(clusts_layers[-1])+i+1) + ',' + 'c-c' + ';')
+
+        sys.stdout.flush()
+        return 0
+    finally:
+        os.chdir(olddir)
+        shutil.rmtree(tmpdir)
 
 
 def main(args):
@@ -152,10 +204,10 @@ def main(args):
     try:
         inputfile = os.path.abspath(theargs.input)
         
-        return run_oslom(inputfile, directed=theargs.directed, nosinglet=theargs.nosinglet, seed=theargs.seed, p_val=theargs.p_val, cp=theargs.cp)
+        return run_oslom(inputfile, theargs)
         
     except Exception as e:
-        sys.stderr.write('Caught exception: ' + str(e))
+        sys.stderr.write('Caught exception: ' + str(e) + '\n')
         return 2
 
 
