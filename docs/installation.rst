@@ -8,11 +8,11 @@ Installation
 Stable release
 --------------
 
-To install Community Detection Gprofiler Gene To Term Mapper, run this command in your terminal:
+To install Community Detection Oslom, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install cdgprofilergenestoterm
+    $ pip install cdoslom
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
@@ -24,19 +24,19 @@ you through the process.
 From sources
 ------------
 
-The sources for Community Detection Gprofiler Gene To Term Mapper can be downloaded from the `Github repo`_.
+The sources for Community Detection Oslom can be downloaded from the `Github repo`_.
 
 You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/ndexbio/cdgprofilergenestoterm
+    $ git clone git://github.com/idekerlab/cdoslom
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl  -OL https://github.com/ndexbio/cdgprofilergenestoterm/tarball/master
+    $ curl  -OL https://github.com/idekerlab/cdgprofilergenestoterm/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
