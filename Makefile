@@ -97,4 +97,4 @@ dockerbuild: dist ## build docker image and store in local repository
 
 dockerpush: dockerbuild ## push image to dockerhub
 	@cv=`grep '__version__' cdoslom/__init__.py | sed "s/^.*= *'//" | sed "s/'.*//"`; \
-	docker push coleslawndex/cdgprofilergenestoterm:$$cv
+	docker push coleslawndex/cdoslom:$$cv
