@@ -23,8 +23,8 @@ def _parse_arguments(desc, args):
     parser.add_argument('--directed', dest='directed', action='store_true',
                         help='If set, then treat input as a directed graph')
     parser.set_defaults(directed=False)
-    parser.add_argument('--nosinglet', dest='nosinglet', action='store_true',
-                        help='If set, then merge singlet with existing modules')
+    parser.add_argument('--singlet', dest='singlet', action='store_true',
+                        help='If set, do NOT merge singlet with existing modules')
     parser.set_defaults(nosinglet=False)
     parser.add_argument('--seed', default=-1, type=int,
                         help='Seed for random generator')
@@ -79,7 +79,6 @@ def run_oslom(graph, theargs):
     :param_cp: greater for larger communities
     :return
     """
-    nosinglet = theargs.nosinglet
     seed = theargs.seed
     p_val = theargs.p_val
     cp = theargs.cp
@@ -115,7 +114,7 @@ def run_oslom(graph, theargs):
             else:
                 weight = '-uw'
             cmdargs.append(weight)
-        if nosinglet == False:
+        if theargs.singlet is True:
             cmdargs.append('-singlet')
         if isinstance(seed, int) and seed>=0:
             cmdargs.append('-seed')
