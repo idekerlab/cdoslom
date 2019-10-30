@@ -156,7 +156,7 @@ def run_oslom(graph, theargs):
                 lines = cfile.read().splitlines()
                 for j in range(len(lines)//2):
                     clusts_layers[i].append([])
-                    members = lines[2*i+1].split()
+                    members = lines[2*j+1].split()
                     for m in members:
                         clusts_layers[i][j].append(m)
             cfile.close()
