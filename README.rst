@@ -33,7 +33,6 @@ Features
 - `param` seed: set random seed for the community detection process;must be nonnegative integer  *default: -1 (no seed)*
 - `param` p_val: p value threshold to consider part of a graph as community; increase to get more communites/modules  *default: 0.1*
 - `param` cp: coverage parameter to decide between taking some modules or their union; works like the reverse resolution parameter; bigger value leads to bigger communities  *default: 0.5*
-- `param` 
 
 Credits
 ---------
