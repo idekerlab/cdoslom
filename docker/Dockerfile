@@ -1,14 +1,30 @@
-FROM continuumio/miniconda3
+FROM centos:centos7
 
-RUN pip install pandas
-RUN pip install gprofiler-official
 
-RUN mkdir /tmp/cdgprofiler
-COPY dist/*.whl /tmp/cdgprofiler/
+RUN yum -y install gcc gcc-c++ make wget tar gunzip
 
-RUN pip install /tmp/cdgprofiler/cdgprofilergenestoterm*whl
+RUN mkdir /tmp/mini \
+    && cd /tmp/mini \
+    && wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+    && chmod a+x *.sh \
+    && ./Miniconda3-latest-Linux-x86_64.sh -b -p /opt/miniconda3 \
+    && cd /tmp \
+    && rm -rf /tmp/mini
 
-RUN rm -rf /tmp/cdgprofiler
+RUN mkdir /tmp/cdoslom
+COPY dist/*.whl /tmp/cdoslom/
 
-ENTRYPOINT ["/opt/conda/bin/cdgprofilergenestoterm.py"]
+RUN /opt/miniconda3/bin/pip install /tmp/cdoslom/cdoslom*whl
+
+RUN rm -rf /tmp/cdoslom
+
+RUN mkdir -p /oslom \
+        && curl -sL http://www.oslom.org/code/OSLOM2.tar.gz \
+        | tar -zxC /oslom \
+        && cd /oslom/OSLOM2 \
+        && ls /oslom/OSLOM2 \
+        && chmod 744 compile_all.sh \
+        && ./compile_all.sh
+
+ENTRYPOINT ["/opt/miniconda3/bin/cdoslom.py"]
 CMD ["--help"]

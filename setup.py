@@ -13,14 +13,12 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 
-with open(os.path.join('cdgprofilergenestoterm', '__init__.py')) as ver_file:
+with open(os.path.join('cdoslom', '__init__.py')) as ver_file:
     for line in ver_file:
         if line.startswith('__version__'):
             version=re.sub("'", "", line[line.index("'"):])
 
 requirements = [
-    'pandas',
-    'gprofiler-official'
 ]
 
 test_requirements = [
@@ -28,23 +26,23 @@ test_requirements = [
 ]
 
 setup(
-    name='cdgprofilergenestoterm',
+    name='cdoslom',
     version=version,
-    description="Maps genes to terms",
+    description="Runs Oslom community detection algorithm in a container",
     long_description=readme + '\n\n' + history,
-    author="Christopher Churas",
-    author_email='churas.camera@gmail.com',
-    url='https://github.com/ndexbio/cdgprofilergenestoterm',
+    author="Song Cao",
+    author_email='soc038@ucsd.edu',
+    url='https://github.com/idekerlab/cdoslom',
     packages=[
-        'cdgprofilergenestoterm',
+        'cdoslom',
     ],
-    package_dir={'cdgprofilergenestoterm':
-                 'cdgprofilergenestoterm'},
+    package_dir={'cdoslom':
+                 'cdoslom'},
     include_package_data=True,
     install_requires=requirements,
     license="BSD license",
     zip_safe=False,
-    keywords='cdgprofilergenestoterm',
+    keywords='cdoslom',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -57,7 +55,7 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
-    scripts=['cdgprofilergenestoterm/cdgprofilergenestoterm.py'],
+    scripts=['cdoslom/cdoslom.py'],
     test_suite='tests',
     tests_require=test_requirements
 )

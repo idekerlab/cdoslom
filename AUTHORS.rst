@@ -5,7 +5,7 @@ Credits
 Development Lead
 ----------------
 
-* Christopher Churas <churas.camera@gmail.com>
+* Song Cao <soc038@ucsd.edu>
 
 Contributors
 ------------
