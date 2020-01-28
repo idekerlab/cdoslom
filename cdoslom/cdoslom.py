@@ -79,7 +79,7 @@ def run_oslom(graph, directed=False, nosinglet=False, seed=-1, p_val=0.1, cp=0.5
         cmdargs.append(weight)
     if nosinglet == False:
         cmdargs.append('-singlet')
-    if isinstance(seed, int) and seed>=0:
+    if isinstance(seed, int) and seed>=1:
         cmdargs.append('-seed')
         cmdargs.append(str(seed))
     cmdargs = cmdargs + ['-t', str(p_val), '-cp', str(cp)]
