@@ -163,23 +163,76 @@ def run_oslom(graph, theargs):
             cfile.close()
             i = i+1
 
+        lines = []
         maxNode = 0
         for clust in clusts_layers[0]:
             maxNode = max(maxNode, max(list(map(int, clust))))
         for i in range(len(clusts_layers[0])):
             for n in clusts_layers[0][i]:
-                sys.stdout.write(str(maxNode+i+1) + ',' + str(n) + ',' + 'c-m' + ';')
+                lines.append(str(maxNode+i+1) + '\t' + str(n))
         maxNode = maxNode + len(clusts_layers[0])
         for i in range(1, len(clusts_layers)):
             for j in range(len(clusts_layers[i-1])):
                 for k in range(len(clusts_layers[i])):
                     if all(x in clusts_layers[i][k] for x in clusts_layers[i-1][j]):
-                        sys.stdout.write(str(maxNode+k+1) + ',' + str(maxNode-len(clusts_layers[i-1])+j+1) + ',' + 'c-c' + ';')
+                        lines.append(str(maxNode+k+1) + '\t' + str(maxNode-len(clusts_layers[i-1])+j+1))
                         break
             maxNode = maxNode + len(clusts_layers[i])
         for i in range(len(clusts_layers[-1])):
-            sys.stdout.write(str(maxNode+1) + ',' + str(maxNode-len(clusts_layers[-1])+i+1) + ',' + 'c-c' + ';')
+            lines.append(str(maxNode+1) + '\t' + str(maxNode-len(clusts_layers[-1])+i+1))
 
+        # trim the hierarchy to remove contigs
+        up_tree = {}
+        down_tree = {}
+        for line in lines:
+            elts = line.split()
+            down_tree.setdefault(elts[0], [])
+            down_tree[elts[0]].append(elts[1])
+            up_tree.setdefault(elts[1], [])
+            up_tree[elts[1]].append(elts[0])
+
+        # store root and leaves
+        set1 = set(down_tree.keys())
+        set2 = set(up_tree.keys())
+        root_l = list(set1.difference(set2))
+        leaf_l = list(set2.difference(set1))
+        node_l = list(set1.union(set2))
+
+        # find all contigs in the DAG
+        Contigs = []
+        work_list = root_l
+        visited = {}
+        for node in node_l:
+            visited[node] = 0
+        work_path = []
+        new_path = False
+        while work_list:
+            key = work_list.pop(0)
+            if new_path == False:
+                work_path.append(key)
+            else:
+                work_path.append(up_tree[key][visited[key]])
+                work_path.append(key)
+            if key in leaf_l:
+                new_path = True
+                Contigs.append(work_path)
+                work_path = []
+            elif len(down_tree[key]) > 1 or visited[key] > 0:
+                new_path = True
+                Contigs.append(work_path)
+                work_path = []
+            if visited[key] == 0 and key not in leaf_l:
+                work_list = down_tree[key] + work_list
+            visited[key] += 1
+
+        # write trimmed DAG
+        for path in Contigs[1:]:
+            sys.stdout.write(path[0] + ',' + path[-1] + ',')
+            if path[-1] in leaf_l:
+                sys.stdout.write('c-m' + ';')
+            else:
+                sys.stdout.write('c-c' + ';')
+            
         sys.stdout.flush()
         return 0
     finally:
